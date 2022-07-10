@@ -1,9 +1,9 @@
 # import torch
 # from model import chatBot
-import json, argparse
+import os, json, argparse
 import discord
 from discord.ext import commands
-from utility import registerUser, addMemo, getMemo, delMemo
+from utility import *
 
 # init
 with open('./setting/key.bin', 'rb') as f:
@@ -14,7 +14,7 @@ with open('./setting/config.json', 'r') as f:
 # config['device'] = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 # bot = chatBot(config)
 
-bert = commands.Bot(command_prefix='!')
+bert = commands.Bot(command_prefix='$')
 
 #調用 event 函式庫
 @bert.event
@@ -81,15 +81,37 @@ async def done(ctx, *, message):
     msg = ''
     for MID in args.id:
         succ, response = delMemo(ctx.message.author.id, MID)
-        corr = '成功' if succ else f'失敗: {response}'
-        msg += f'\nID:{MID}，刪除{corr}'
+        corr = 'delete成功' if succ else f'delete失敗: {response}'
+        msg += f'\nID:{MID}，{corr}'
+    await ctx.send(f'<@{ctx.message.author.id}>\n```{msg}```')
+
+@bert.command()
+async def addimg(ctx, *, message):
+    msg = ''
+    # print('continue')
+    for attachment in ctx.message.attachments:
+        url = attachment.url
+        _, file_type = os.path.splitext(url)
+        if file_type.lower() in ['.jpg', '.jpeg', '.gif', '.png']:
+            succ, response = addImg(message, url)
+            corr = 'insert成功' if succ else f'insert失敗'
+            msg += f'\n{corr}，{response}'
+        else:
+            msg += f'\ninsert失敗，{url}的附檔名要為jpg jpeg png gif'
     await ctx.send(f'<@{ctx.message.author.id}>\n```{msg}```')
 
 @bert.event
 async def on_command_error(ctx, error):
+    command = ctx.invoked_with
     if isinstance(error, commands.errors.MissingRequiredArgument):
         await ctx.send(f'<@{ctx.message.author.id}>，這個指令需要在後面加上參數喔')
+    elif isinstance(error, commands.errors.CommandNotFound):
+        name, count = getImgName(command)
+        if name:
+            await ctx.send(f'從{count}張圖裡面隨機選出這張\n{getRandomImg(name)}')
+        else:
+            await ctx.send(f'<@{ctx.message.author.id}>，沒有這個指令')
     else:
-        await ctx.send(f'<@{ctx.message.author.id}>，怪怪的')
+        await ctx.send(f'<@{ctx.message.author.id}>，怪怪的\n{str(error)}')
         
 bert.run(key)

@@ -1,4 +1,4 @@
-import sqlite3
+import sqlite3, random
 from functools import wraps
 sqlite3.enable_callback_tracebacks(True)
 
@@ -9,6 +9,7 @@ def initDataBase(name):
     with open(f'./database/schema/{name}.sql', 'r') as f:
         database.cursor().executescript(f.read())
     database.cursor().execute("PRAGMA foreign_keys=ON")
+    database.commit()
     return database
 db = {i: initDataBase(i) for i in ['record', 'image']}
 
@@ -92,5 +93,34 @@ def delMemo(id, MID):
         return False, '你想刪除別人訊息，小壞蛋'
         
     db['record'].commit()
-    return True, 'insert成功'
+    return True, 'delete成功'
 
+
+def addImg(name, url):
+    found = True if db['image'].cursor().execute('select name from Count where name = ?', (name,)).fetchone() else False
+    act = {True:    ('update Count set count = count + 1 where name = ?', f'{name} 多了一張圖隨機選擇'),
+           False:   ('insert into Count (name) values (?)', f'新增了 {name}')}
+    sql, response = act[found]
+    db['image'].cursor().execute(sql, (name,))
+    try:
+        db['image'].cursor().execute('''
+            insert into Images (name, image)
+            values (?, ?)
+        ''', (name, url))
+        db['image'].commit()
+    except:
+        return False, f'insert圖片時發生錯誤，可能是因為這張圖片已經在資料庫裡了'
+    return True, response
+
+
+getImgName = lambda query: db['image'].cursor().execute('''
+    select name, count from Count where name = ?
+''', (query,)).fetchone()
+
+
+getAllWantedImg =  lambda name: db['image'].cursor().execute('''
+    select image from Images where name = ?
+''', (name,)).fetchall()
+
+
+getRandomImg = lambda name: random.choice([i for i in getAllWantedImg(name)])[0]
