@@ -1,6 +1,6 @@
 # import torch
 # from model import chatBot
-import os, json, argparse
+import io, os, json, argparse, requests
 import discord
 from discord.ext import commands
 from utility import *
@@ -88,17 +88,25 @@ async def done(ctx, *, message):
 @bert.command()
 async def addimg(ctx, *, message):
     msg = ''
-    # print('continue')
+    if not ctx.message.attachments:
+        await ctx.send(f'<@{ctx.message.author.id}>，這個指令要附上圖片')
+        return
     for attachment in ctx.message.attachments:
         url = attachment.url
         _, file_type = os.path.splitext(url)
         if file_type.lower() in ['.jpg', '.jpeg', '.gif', '.png']:
-            succ, response = addImg(message, url)
+            img = requests.get(url).content
+            succ, response = addImg(message, img, file_type[1:])
             corr = 'insert成功' if succ else f'insert失敗'
             msg += f'\n{corr}，{response}'
         else:
             msg += f'\ninsert失敗，{url}的附檔名要為jpg jpeg png gif'
     await ctx.send(f'<@{ctx.message.author.id}>\n```{msg}```')
+
+def encodeImg(name):
+    img, img_type = getRandomImg(name)
+    file = discord.File(io.BytesIO(img),filename=f"image.{img_type}")
+    return file
 
 @bert.event
 async def on_command_error(ctx, error):
@@ -108,7 +116,8 @@ async def on_command_error(ctx, error):
     elif isinstance(error, commands.errors.CommandNotFound):
         name, count = getImgName(command)
         if name:
-            await ctx.send(f'從{count}張圖裡面隨機選出這張\n{getRandomImg(name)}')
+            file = encodeImg(name)
+            await ctx.send(f'從{count}張圖裡面隨機選出這張', file=file)
         else:
             await ctx.send(f'<@{ctx.message.author.id}>，沒有這個指令')
     else:

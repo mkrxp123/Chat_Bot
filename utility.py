@@ -96,7 +96,7 @@ def delMemo(id, MID):
     return True, 'delete成功'
 
 
-def addImg(name, url):
+def addImg(name, img, image_type):
     found = True if db['image'].cursor().execute('select name from Count where name = ?', (name,)).fetchone() else False
     act = {True:    ('update Count set count = count + 1 where name = ?', f'{name} 多了一張圖隨機選擇'),
            False:   ('insert into Count (name) values (?)', f'新增了 {name}')}
@@ -104,23 +104,26 @@ def addImg(name, url):
     db['image'].cursor().execute(sql, (name,))
     try:
         db['image'].cursor().execute('''
-            insert into Images (name, image)
-            values (?, ?)
-        ''', (name, url))
-        db['image'].commit()
+            insert into Images (name, image, image_type)
+            values (?, ?, ?)
+        ''', (name, img, image_type))
     except:
-        return False, f'insert圖片時發生錯誤，可能是因為這張圖片已經在資料庫裡了'
+        db['image'].cursor().execute('update Count set count = count - 1 where name = ?', (name,))
+        return False, f'insert圖片時發生錯誤，可能是因為這張圖片已經在資料庫裡或名字取太長了'
+    db['image'].commit()
     return True, response
 
 
-getImgName = lambda query: db['image'].cursor().execute('''
-    select name, count from Count where name = ?
-''', (query,)).fetchone()
+def getImgName(query):
+    temp = db['image'].cursor().execute('''
+        select name, count from Count where name = ?
+    ''', (query,)).fetchone()
+    return temp if temp else (None, None)
 
 
 getAllWantedImg =  lambda name: db['image'].cursor().execute('''
-    select image from Images where name = ?
+    select image, image_type from Images where name = ?
 ''', (name,)).fetchall()
 
 
-getRandomImg = lambda name: random.choice([i for i in getAllWantedImg(name)])[0]
+getRandomImg = lambda name: random.choice([i for i in getAllWantedImg(name)])
