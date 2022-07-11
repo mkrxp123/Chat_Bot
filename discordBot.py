@@ -59,11 +59,11 @@ async def memo(ctx, *, message):
 @bert.command()
 async def remind(ctx):
     succ, response = getMemo(ctx.message.author.id)
-    msg = ''
+    status = {'ID': [], 'start time': [], 'response': []}
     if succ and response:
         for MID, content, start_time in response:
-            msg += f'\nID:{MID} 建立時間:{start_time}\n{content}'
-        await ctx.send(f'<@{ctx.message.author.id}>\n```{msg}```')
+            status = appendDict(status, MID, start_time, content)
+        await ctx.send(f'<@{ctx.message.author.id}>\n```{tableMsg(status)}```')
     else:
         await ctx.send(f'<@{ctx.message.author.id}>，{response}')
         
@@ -78,34 +78,40 @@ async def done(ctx, *, message):
         await ctx.send(f'<@{ctx.message.author.id}>\n{help_msg}')
         return
     
-    msg = ''
+    status = {'id': [], 'response': []}
     for MID in args.id:
         succ, response = delMemo(ctx.message.author.id, MID)
-        corr = 'delete成功' if succ else f'delete失敗: {response}'
-        msg += f'\nID:{MID}，{corr}'
-    await ctx.send(f'<@{ctx.message.author.id}>\n```{msg}```')
+        corr = 'delete成功' if succ else f'delete失敗，{response}'
+        status = appendDict(status, MID, corr)
+    await ctx.send(f'<@{ctx.message.author.id}>\n```{tableMsg(status)}```')
 
 @bert.command()
 async def addimg(ctx, *, message):
-    msg = ''
     if not ctx.message.attachments:
         await ctx.send(f'<@{ctx.message.author.id}>，這個指令要附上圖片')
         return
+    status = {'insert': [], 'response': []}
     for attachment in ctx.message.attachments:
         url = attachment.url
         _, file_type = os.path.splitext(url)
         if file_type.lower() in ['.jpg', '.jpeg', '.gif', '.png']:
             img = requests.get(url).content
             succ, response = addImg(message, img, file_type[1:])
-            corr = 'insert成功' if succ else f'insert失敗'
-            msg += f'\n{corr}，{response}'
+            corr = '成功' if succ else f'失敗'
+            status = appendDict(status, corr, response)
         else:
-            msg += f'\ninsert失敗，{url}的附檔名要為jpg jpeg png gif'
-    await ctx.send(f'<@{ctx.message.author.id}>\n```{msg}```')
+            status = appendDict(status, '失敗', f'{url}的附檔名要為jpg jpeg png gif')
+    await ctx.send(f'<@{ctx.message.author.id}>\n```{tableMsg(status)}```')
+
+@bert.command()
+@commands.is_owner()
+async def delimg(ctx, *, message):
+    succ, response = delImg(message)
+    await ctx.send(f'<@{ctx.message.author.id}>\n```{response}```')
 
 def encodeImg(name):
     img, img_type = getRandomImg(name)
-    file = discord.File(io.BytesIO(img),filename=f"image.{img_type}")
+    file = discord.File(io.BytesIO(img),filename=f'image.{img_type}')
     return file
 
 @bert.event

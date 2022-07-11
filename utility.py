@@ -1,4 +1,5 @@
 import sqlite3, random
+import pandas as pd
 from functools import wraps
 sqlite3.enable_callback_tracebacks(True)
 
@@ -22,6 +23,15 @@ def delOutDatedData(name, table):
     db[name].commit()
     return
 delOutDatedData('record', 'Memo')
+
+
+def appendDict(status, *args):
+    for key, item in zip(status.keys(), args):
+        status[key].append(item)
+    return status
+
+
+tableMsg = lambda status: pd.DataFrame(status).to_string(index=False, justify='left')
 
 
 def registerUser(auther):
@@ -98,8 +108,8 @@ def delMemo(id, MID):
 
 def addImg(name, img, image_type):
     found = True if db['image'].cursor().execute('select name from Count where name = ?', (name,)).fetchone() else False
-    act = {True:    ('update Count set count = count + 1 where name = ?', f'{name} 多了一張圖隨機選擇'),
-           False:   ('insert into Count (name) values (?)', f'新增了 {name}')}
+    act = {True:    ('update Count set count = count + 1 where name = ?', f'{name}多了一張圖隨機選擇'),
+           False:   ('insert into Count (name) values (?)', f'新增了{name}')}
     sql, response = act[found]
     db['image'].cursor().execute(sql, (name,))
     try:
@@ -119,6 +129,23 @@ def getImgName(query):
         select name, count from Count where name = ?
     ''', (query,)).fetchone()
     return temp if temp else (None, None)
+
+
+def delImg(query, index=None):
+    name, count = getImgName(query)
+    if not index and name:
+        db['image'].cursor().execute('''
+            delete from Images where name = ?
+        ''', (query,))
+        db['image'].cursor().execute('''
+            delete from Count where name = ?
+        ''', (query,))
+        db['image'].commit()
+        return True, f'{name}刪除成功'
+    elif not name:
+        return False, 'no such name'
+    else:
+        return False, 'not yet implemented'
 
 
 getAllWantedImg =  lambda name: db['image'].cursor().execute('''
