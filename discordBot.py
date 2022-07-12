@@ -1,6 +1,6 @@
 # import torch
 # from model import chatBot
-import io, os, json, argparse, requests
+import re, io, os, json, argparse, requests
 import discord
 from discord.ext import commands
 from utility import *

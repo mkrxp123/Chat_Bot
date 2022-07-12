@@ -1,6 +1,6 @@
 __pycache__
-database
-setting
 temp
-PTT_QA.csv
 *.ipynb
+*db
+PTT_QA.csv
+key.bin
