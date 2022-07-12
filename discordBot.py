@@ -1,6 +1,6 @@
 # import torch
 # from model import chatBot
-import re, io, os, json, argparse, requests
+import io, os, json, argparse, requests
 import discord
 from discord.ext import commands
 from utility import *
@@ -20,21 +20,32 @@ bert = commands.Bot(command_prefix='$')
 @bert.event
 async def on_ready():
     print('目前登入身份：', bert.user)
-    
+
+async def replyedMsg(message):
+    ref = message.reference
+    if ref is not None:
+        reply = await message.channel.fetch_message(message.reference.message_id)
+        return reply.content
+    return None
+
 #當有訊息時
 @bert.event
 async def on_message(message):
     #排除自己的訊息，避免陷入無限循環
     if message.author == bert.user:
         return
-    if bert.user.mentioned_in(message):
+    reply = await replyedMsg(message)
+    if reply:
+        addChat(reply, message.content)
+        await message.channel.send(reply)
+    elif bert.user.mentioned_in(message):
         print(message.content)
-        await message.channel.send('tagged')
+        await message.channel.send('幹嘛')
     await bert.process_commands(message)
     
 @bert.command()
 async def introduce(ctx):
-    await ctx.send(f'<@{ctx.message.author.id}>，tag我，就會回覆用BERT seq2seq產生的回答')
+    await ctx.send(f'<@{ctx.message.author.id}>，tag我，就會回覆用BERT seq2seq產生的回答(但我還沒實作ㄎㄎ)')
 
 @bert.command()
 async def register(ctx):

@@ -1,4 +1,4 @@
-import sqlite3, random
+import re, sqlite3, random
 import pandas as pd
 from functools import wraps
 sqlite3.enable_callback_tracebacks(True)
@@ -32,6 +32,27 @@ def appendDict(status, *args):
 
 
 tableMsg = lambda status: pd.DataFrame(status).to_string(index=False, justify='left')
+
+patterns = {re.compile(r'<.+>|[^!?，？。！ \u4e00-\u9fa50-9]') : '', 
+            re.compile(r'(.+?)\1+'): r'\1'}
+def regex(msg):
+    for pattern, replace in patterns.items():
+        msg = pattern.sub(replace, msg)
+    return msg
+
+
+def addChat(Q, A):
+    Q, A = regex(Q), regex(A)
+    print(Q, A)
+    try:
+        db['record'].cursor().execute('''
+            insert into Chat (Q, A)
+            values (?, ?)
+        ''', (Q, A))
+        db['record'].commit()
+    except:
+        pass
+    return
 
 
 def registerUser(auther):
