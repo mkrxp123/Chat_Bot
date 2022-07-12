@@ -43,7 +43,6 @@ def regex(msg):
 
 def addChat(Q, A):
     Q, A = regex(Q), regex(A)
-    print(Q, A)
     try:
         db['record'].cursor().execute('''
             insert into Chat (Q, A)
